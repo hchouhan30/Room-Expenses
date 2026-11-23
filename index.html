@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HostelHisab" />
+  <title>HostelHisab - Roommate Expense Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, select { user-select: text; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+  <!-- SETUP / JOIN ROOM SCREEN -->
+  <div id="setupScreen" class="min-h-screen flex flex-col justify-center px-5 py-10 max-w-md mx-auto">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-200 mb-4">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-slate-900">HostelHisab</h1>
+      <p class="text-sm text-slate-500 mt-1">2 Roommates • Live Daily Kharcha & Monthly Hisab</p>
+    </div>
+
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+      <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
+        <button id="tabCreateBtn" onclick="switchSetupTab('create')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white text-emerald-700 shadow-sm transition">
+          Naya Room Banayein
+        </button>
+        <button id="tabJoinBtn" onclick="switchSetupTab('join')" class="flex-1 py-2 text-sm font-bold rounded-lg text-slate-500 transition">
+          Room Join Karein
+        </button>
+      </div>
+
+      <!-- Create Room Form -->
+      <form id="createRoomForm" onsubmit="handleCreateRoom(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Hostel / Room Ka Naam</label>
+          <input type="text" id="roomNameInput" required placeholder="e.g. Room 204 Boys" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Aapka Naam (Roommate 1)</label>
+          <input type="text" id="creatorNameInput" required placeholder="e.g. Himanshu" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Partner Ka Naam (Roommate 2)</label>
+          <input type="text" id="partnerNameInput" required placeholder="e.g. Rahul" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium" />
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md shadow-emerald-200 transition active:scale-[0.99]">
+          Room Banayein & Code Paayein
+        </button>
+      </form>
+
+      <!-- Join Room Form -->
+      <form id="joinRoomForm" onsubmit="handleJoinRoom(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">6-Digit Room Code</label>
+          <input type="text" id="joinCodeInput" required maxlength="6" placeholder="e.g. AB12CD" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-bold uppercase tracking-widest" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Aapka Naam (Kaun Join Kar Rha Hai?)</label>
+          <input type="text" id="joinUserNameInput" required placeholder="e.g. Rahul" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium" />
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md shadow-emerald-200 transition active:scale-[0.99]">
+          Room Me Connect Karein
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP SCREEN -->
+  <div id="appScreen" class="hidden min-h-screen pb-24 max-w-lg mx-auto bg-slate-50">
+    <!-- Top Header -->
+    <header class="bg-emerald-600 text-white px-5 pt-5 pb-6 rounded-b-3xl shadow-md no-print">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="headerRoomName" class="text-lg font-extrabold tracking-tight">Room 204</h1>
+            <span id="liveBadge" class="text-[10px] bg-emerald-500/80 border border-emerald-400 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-lime-300 animate-pulse"></span> Live
+            </span>
+          </div>
+          <p class="text-xs text-emerald-100 mt-0.5">
+            Room Code: <strong id="headerRoomCode" class="tracking-wider bg-emerald-700/60 px-2 py-0.5 rounded">------</strong>
+            <button onclick="copyRoomInvite()" class="ml-1.5 underline text-white font-semibold"><i class="fa-solid fa-share-nodes"></i> Share</button>
+          </p>
+        </div>
+        <button onclick="logoutRoom()" title="Change Room" class="w-9 h-9 rounded-xl bg-emerald-700/60 flex items-center justify-center text-emerald-100 hover:text-white">
+          <i class="fa-solid fa-right-from-bracket text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="mt-4 flex items-center justify-between bg-emerald-700/50 px-3.5 py-2 rounded-xl">
+        <span class="text-xs font-semibold text-emerald-100"><i class="fa-regular fa-calendar mr-1.5"></i>Hisab Mahina:</span>
+        <input type="month" id="monthFilter" onchange="renderDashboard()" class="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer" />
+      </div>
+    </header>
+
+    <!-- TAB 1: DASHBOARD & EXPENSES -->
+    <main id="tabExpenses" class="px-4 -mt-3 space-y-4">
+      <!-- Settlement Verdict Card -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase">Total Room Kharcha</p>
+            <p id="totalRoomSpend" class="text-2xl font-extrabold text-slate-900">₹0</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[11px] font-bold text-slate-400 uppercase">Entries</p>
+            <p id="totalEntriesCount" class="text-lg font-bold text-slate-700">0</p>
+          </div>
+        </div>
+
+        <!-- 2 Roommates Spend Comparison -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p id="p1Label" class="text-xs font-bold text-slate-500 truncate">Person 1</p>
+            <p id="p1PaidAmount" class="text-base font-extrabold text-slate-800 mt-0.5">₹0</p>
+            <p class="text-[10px] text-slate-400">Jeb se kharch kiya</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p id="p2Label" class="text-xs font-bold text-slate-500 truncate">Person 2</p>
+            <p id="p2PaidAmount" class="text-base font-extrabold text-slate-800 mt-0.5">₹0</p>
+            <p class="text-[10px] text-slate-400">Jeb se kharch kiya</p>
+          </div>
+        </div>
+
+        <!-- Final Settlement Banner -->
+        <div id="settlementBanner" class="bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5">
+          <i class="fa-solid fa-scale-balanced text-amber-600 text-base"></i>
+          <span id="settlementText">Abhi koi kharcha darj nahi hai.</span>
+        </div>
+      </div>
+
+      <!-- Recent Transactions List -->
+      <div>
+        <div class="flex items-center justify-between mb-2 px-1">
+          <h2 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Roj Ka Kharcha (History)</h2>
+          <span class="text-[11px] text-slate-400">Newest first</span>
+        </div>
+        <div id="expenseList" class="space-y-2.5">
+          <!-- Expense cards injected here -->
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: ADD EXPENSE FORM -->
+    <main id="tabAdd" class="hidden px-4 pt-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h2 class="text-base font-extrabold text-slate-900 mb-4">Naya Kharcha Likhein</h2>
+        <form onsubmit="handleAddExpense(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Kis Cheez Par Kharch Hua?</label>
+            <input type="text" id="expTitle" required placeholder="e.g. Sabzi, Doodh, Chai, Bijli Bill" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Amount (₹)</label>
+              <input type="number" id="expAmount" required min="1" step="any" placeholder="e.g. 150" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-bold" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Date</label>
+              <input type="date" id="expDate" required class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-xs font-bold" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
+            <select id="expCategory" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium bg-white">
+              <option value="Food & Groceries">🥗 Khana / Sabzi / Rashan</option>
+              <option value="Tea & Snacks">☕ Chai / Nashta / Cold Drink</option>
+              <option value="Bills & Rent">💡 Room Rent / Bijli / Wi-Fi / Gas</option>
+              <option value="Travel & Auto">🛺 Auto / Petrol / Travel</option>
+              <option value="Other">📦 Other / Personal</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Kisne Paise Diye? (Paid By)</label>
+            <select id="expPaidBy" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-bold bg-white">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Hisab Kaise Baantna Hai? (Split)</label>
+            <select id="expSplitType" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm font-medium bg-white">
+              <option value="equal">50-50 Equal (Dono me aadha-aadha)</option>
+              <option value="full_other">100% Doosre Par (Sirf partner ka personal kharcha)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md shadow-emerald-200 transition active:scale-[0.99]">
+            <i class="fa-solid fa-check mr-1.5"></i> Kharcha Save Karein
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <!-- TAB 3: MONTHLY REPORT & EXPORT -->
+    <main id="tabReport" class="hidden px-4 pt-4 space-y-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-extrabold text-slate-900">Monthly Hisab Report</h2>
+          <span id="reportMonthBadge" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">Month</span>
+        </div>
+
+        <!-- Summary Table -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl mb-4">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-3">Roommate</th>
+                <th class="p-3">Paid (Diya)</th>
+                <th class="p-3">Share (Banta Hai)</th>
+              </tr>
+            </thead>
+            <tbody id="reportSummaryBody" class="divide-y divide-slate-100 font-medium">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Category Breakdown -->
+        <h3 class="text-xs font-extrabold text-slate-500 uppercase mb-2.5">Category-Wise Kharcha</h3>
+        <div id="categoryBreakdown" class="space-y-2.5 mb-5">
+          <!-- Category bars -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-2.5 no-print">
+          <button onclick="copyWhatsAppReport()" class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp Par Report Bhejein
+          </button>
+          <button onclick="downloadCSV()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-file-csv"></i> Excel / CSV
+          </button>
+          <button onclick="window.print()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print / PDF
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 max-w-lg mx-auto flex justify-around items-center py-2 safe-bottom z-40 no-print">
+      <button onclick="switchMainTab('expenses')" id="navExpenses" class="flex flex-col items-center text-emerald-600 font-bold text-xs px-4 py-1">
+        <i class="fa-solid fa-receipt text-lg mb-1"></i>
+        <span>Kharche</span>
+      </button>
+      <button onclick="switchMainTab('add')" id="navAdd" class="flex flex-col items-center text-slate-400 font-bold text-xs px-4 py-1">
+        <div class="w-11 h-11 bg-emerald-600 text-white rounded-full flex items-center justify-center -mt-6 shadow-lg shadow-emerald-200 border-4 border-white">
+          <i class="fa-solid fa-plus text-lg"></i>
+        </div>
+        <span class="mt-1">Add Entry</span>
+      </button>
+      <button onclick="switchMainTab('report')" id="navReport" class="flex flex-col items-center text-slate-400 font-bold text-xs px-4 py-1">
+        <i class="fa-solid fa-chart-pie text-lg mb-1"></i>
+        <span>Report</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script>
+    // =========================================================================
+    // PWA INSTALLABLE MANIFEST & SERVICE WORKER SETUP
+    // =========================================================================
+    (function setupPWA() {
+      const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#059669"/><path fill="#ffffff" d="M128 176c0-26.5 21.5-48 48-48h160c26.5 0 48 21.5 48 48v16h-208c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32h208v16c0 26.5-21.5 48-48 48H176c-26.5 0-48-21.5-48-48V176zm256 48h32c17.7 0 32 14.3 32 32v32c0 17.7-14.3 32-32 32h-32c-17.7 0-32-14.3-32-32v-32c0-17.7 14.3-32 32-32zm0 64a16 16 0 1 0 0-32 16 16 0 1 0 0 32z"/></svg>`;
+      const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+
+      const manifest = {
+        name: "HostelHisab - Roommate Expense Tracker",
+        short_name: "HostelHisab",
+        description: "2 Roommates Live Daily Kharcha & Monthly Hisab",
+        start_url: window.location.href,
+        display: "standalone",
+        background_color: "#f8fafc",
+        theme_color: "#059669",
+        icons: [
+          { src: iconUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+          { src: iconUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = URL.createObjectURL(manifestBlob);
+      document.head.appendChild(manifestLink);
+
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          self.addEventListener('install', (e) => self.skipWaiting());
+          self.addEventListener('activate', (e) => self.clients.claim());
+          self.addEventListener('fetch', (e) => {});
+        `;
+        const swBlob = new Blob([swCode], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+      }
+    })();
+
+    // =========================================================================
+    // FIREBASE CONFIGURATION
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEm4UFRMCi0rbv7-Cs6TS3zkSbVYgQ5uY",
+      authDomain: "roomexpenses-95165.firebaseapp.com",
+      databaseURL: "https://roomexpenses-95165-default-rtdb.firebaseio.com",
+      projectId: "roomexpenses-95165",
+      storageBucket: "roomexpenses-95165.firebasestorage.app",
+      messagingSenderId: "604471585769",
+      appId: "1:604471585769:web:c6a4d7bbd67e2b4d3fb978",
+      measurementId: "G-QR8RTR13GM"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentRoom = JSON.parse(localStorage.getItem('hostelHisabRoom')) || null;
+    let expensesList = [];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonthStr = todayStr.slice(0, 7);
+    document.getElementById('expDate').value = todayStr;
+    document.getElementById('monthFilter').value = currentMonthStr;
+
+    if (currentRoom) {
+      initApp();
+    }
+
+    function switchSetupTab(tab) {
+      const createForm = document.getElementById('createRoomForm');
+      const joinForm = document.getElementById('joinRoomForm');
+      const btnC = document.getElementById('tabCreateBtn');
+      const btnJ = document.getElementById('tabJoinBtn');
+
+      if (tab === 'create') {
+        createForm.classList.remove('hidden');
+        joinForm.classList.add('hidden');
+        btnC.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-emerald-700 shadow-sm transition";
+        btnJ.className = "flex-1 py-2 text-sm font-bold rounded-lg text-slate-500 transition";
+      } else {
+        createForm.classList.add('hidden');
+        joinForm.classList.remove('hidden');
+        btnJ.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-emerald-700 shadow-sm transition";
+        btnC.className = "flex-1 py-2 text-sm font-bold rounded-lg text-slate-500 transition";
+      }
+    }
+
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    }
+
+    async function handleCreateRoom(e) {
+      e.preventDefault();
+      const roomName = document.getElementById('roomNameInput').value.trim();
+      const p1 = document.getElementById('creatorNameInput').value.trim();
+      const p2 = document.getElementById('partnerNameInput').value.trim();
+      const code = generateRoomCode();
+
+      const roomData = { code, roomName, p1, p2, currentUser: p1 };
+      await db.ref('rooms/' + code + '/info').set({ roomName, p1, p2 });
+      localStorage.setItem('hostelHisabRoom', JSON.stringify(roomData));
+      currentRoom = roomData;
+      initApp();
+    }
+
+    async function handleJoinRoom(e) {
+      e.preventDefault();
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      const userName = document.getElementById('joinUserNameInput').value.trim();
+
+      const snap = await db.ref('rooms/' + code + '/info').once('value');
+      if (!snap.exists()) {
+        alert("Galat Room Code! Apne roommate se sahi 6-digit code poochein.");
+        return;
+      }
+      const info = snap.val();
+      const roomData = { code, roomName: info.roomName, p1: info.p1, p2: info.p2, currentUser: userName };
+      localStorage.setItem('hostelHisabRoom', JSON.stringify(roomData));
+      currentRoom = roomData;
+      initApp();
+    }
+
+    function initApp() {
+      document.getElementById('setupScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.remove('hidden');
+
+      document.getElementById('headerRoomName').textContent = currentRoom.roomName;
+      document.getElementById('headerRoomCode').textContent = currentRoom.code;
+      document.getElementById('p1Label').textContent = currentRoom.p1;
+      document.getElementById('p2Label').textContent = currentRoom.p2;
+
+      const paidBySelect = document.getElementById('expPaidBy');
+      paidBySelect.innerHTML = `
+        <option value="${currentRoom.p1}">${currentRoom.p1}</option>
+        <option value="${currentRoom.p2}">${currentRoom.p2}</option>
+      `;
+
+      db.ref('rooms/' + currentRoom.code + '/expenses').on('value', (snapshot) => {
+        const data = snapshot.val();
+        expensesList = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+        renderDashboard();
+      });
+    }
+
+    function switchMainTab(tab) {
+      ['tabExpenses', 'tabAdd', 'tabReport'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['navExpenses', 'navAdd', 'navReport'].forEach(id => {
+        document.getElementById(id).classList.replace('text-emerald-600', 'text-slate-400');
+      });
+
+      if (tab === 'expenses') {
+        document.getElementById('tabExpenses').classList.remove('hidden');
+        document.getElementById('navExpenses').classList.replace('text-slate-400', 'text-emerald-600');
+      } else if (tab === 'add') {
+        document.getElementById('tabAdd').classList.remove('hidden');
+        document.getElementById('navAdd').classList.replace('text-slate-400', 'text-emerald-600');
+      } else if (tab === 'report') {
+        document.getElementById('tabReport').classList.remove('hidden');
+        document.getElementById('navReport').classList.replace('text-slate-400', 'text-emerald-600');
+        renderDashboard();
+      }
+    }
+
+    async function handleAddExpense(e) {
+      e.preventDefault();
+      const title = document.getElementById('expTitle').value.trim();
+      const amount = parseFloat(document.getElementById('expAmount').value);
+      const date = document.getElementById('expDate').value;
+      const category = document.getElementById('expCategory').value;
+      const paidBy = document.getElementById('expPaidBy').value;
+      const splitType = document.getElementById('expSplitType').value;
+
+      const entry = { title, amount, date, category, paidBy, splitType, createdAt: Date.now() };
+      await db.ref('rooms/' + currentRoom.code + '/expenses').push(entry);
+
+      document.getElementById('expTitle').value = '';
+      document.getElementById('expAmount').value = '';
+      switchMainTab('expenses');
+    }
+
+    async function deleteExpense(id) {
+      if (!confirm("Kya aap is kharche ko delete karna chahte hain?")) return;
+      await db.ref('rooms/' + currentRoom.code + '/expenses/' + id).remove();
+    }
+
+    function getFilteredExpenses() {
+      const selectedMonth = document.getElementById('monthFilter').value;
+      return expensesList
+        .filter(item => item.date && item.date.startsWith(selectedMonth))
+        .sort((a, b) => new Date(b.date) - new Date(a.date) || b.createdAt - a.createdAt);
+    }
+
+    function renderDashboard() {
+      const filtered = getFilteredExpenses();
+      const p1 = currentRoom.p1;
+      const p2 = currentRoom.p2;
+
+      let totalSpend = 0;
+      let p1Paid = 0, p2Paid = 0;
+      let p1Share = 0, p2Share = 0;
+      const catTotals = {};
+
+      filtered.forEach(item => {
+        const amt = Number(item.amount) || 0;
+        totalSpend += amt;
+        catTotals[item.category] = (catTotals[item.category] || 0) + amt;
+
+        if (item.paidBy === p1) {
+          p1Paid += amt;
+          if (item.splitType === 'equal') { p1Share += amt / 2; p2Share += amt / 2; }
+          else { p2Share += amt; }
+        } else {
+          p2Paid += amt;
+          if (item.splitType === 'equal') { p1Share += amt / 2; p2Share += amt / 2; }
+          else { p1Share += amt; }
+        }
+      });
+
+      document.getElementById('totalRoomSpend').textContent = `₹${totalSpend.toFixed(0)}`;
+      document.getElementById('totalEntriesCount').textContent = filtered.length;
+      document.getElementById('p1PaidAmount').textContent = `₹${p1Paid.toFixed(0)}`;
+      document.getElementById('p2PaidAmount').textContent = `₹${p2Paid.toFixed(0)}`;
+
+      const p1Net = p1Paid - p1Share;
+      const banner = document.getElementById('settlementBanner');
+      const textEl = document.getElementById('settlementText');
+
+      if (filtered.length === 0) {
+        banner.className = "bg-slate-100 border border-slate-200 text-slate-600 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5";
+        textEl.textContent = "Is mahine abhi tak koi kharcha nahi likha gaya hai.";
+      } else if (Math.abs(p1Net) < 1) {
+        banner.className = "bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5";
+        textEl.textContent = "Dono ka hisab bilkul barabar (Settled) hai!";
+      } else if (p1Net > 0) {
+        banner.className = "bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5";
+        textEl.innerHTML = `<span class="underline">${p2}</span> ko <span class="underline">${p1}</span> ko <span class="text-emerald-700 font-extrabold text-sm">₹${Math.round(p1Net)}</span> dene hain.`;
+      } else {
+        banner.className = "bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5";
+        textEl.innerHTML = `<span class="underline">${p1}</span> ko <span class="underline">${p2}</span> ko <span class="text-emerald-700 font-extrabold text-sm">₹${Math.round(Math.abs(p1Net))}</span> dene hain.`;
+      }
+
+      const listEl = document.getElementById('expenseList');
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">Neeche <strong>+ Add Entry</strong> button dabakar pehla kharcha likhein.</div>`;
+      } else {
+        listEl.innerHTML = filtered.map(item => `
+          <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+            <div class="flex-1 min-w-0 pr-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-slate-800 truncate">${item.title}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${item.splitType === 'equal' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}">
+                  ${item.splitType === 'equal' ? '50-50' : 'Full Partner'}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">
+                Paid by <strong class="text-slate-700">${item.paidBy}</strong> • ${item.date} • ${item.category}
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-extrabold text-slate-900">₹${item.amount}</span>
+              <button onclick="deleteExpense('${item.id}')" class="text-slate-300 hover:text-red-500 transition p-1">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('reportMonthBadge').textContent = document.getElementById('monthFilter').value;
+      document.getElementById('reportSummaryBody').innerHTML = `
+        <tr>
+          <td class="p-3 font-bold text-slate-800">${p1}</td>
+          <td class="p-3">₹${p1Paid.toFixed(0)}</td>
+          <td class="p-3">₹${p1Share.toFixed(0)}</td>
+        </tr>
+        <tr>
+          <td class="p-3 font-bold text-slate-800">${p2}</td>
+          <td class="p-3">₹${p2Paid.toFixed(0)}</td>
+          <td class="p-3">₹${p2Share.toFixed(0)}</td>
+        </tr>
+      `;
+
+      const catEl = document.getElementById('categoryBreakdown');
+      const cats = Object.keys(catTotals);
+      catEl.innerHTML = cats.length === 0
+        ? `<p class="text-xs text-slate-400">No data available.</p>`
+        : cats.map(cat => {
+            const pct = totalSpend > 0 ? Math.round((catTotals[cat] / totalSpend) * 100) : 0;
+            return `
+              <div>
+                <div class="flex justify-between text-xs font-bold mb-1">
+                  <span>${cat}</span>
+                  <span>₹${catTotals[cat]} (${pct}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div class="bg-emerald-500 h-full rounded-full" style="width: ${pct}%"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+    }
+
+    function copyRoomInvite() {
+      const msg = `HostelHisab App me hamare room (${currentRoom.roomName}) se judne ke liye yeh Room Code daalein: *${currentRoom.code}*`;
+      navigator.clipboard.writeText(msg);
+      alert("Room Code copy ho gaya! Ab WhatsApp par apne roommate ko bhej dein:\n\n" + msg);
+    }
+
+    function copyWhatsAppReport() {
+      const month = document.getElementById('monthFilter').value;
+      const settlement = document.getElementById('settlementText').innerText;
+      const total = document.getElementById('totalRoomSpend').innerText;
+      const p1 = currentRoom.p1, p2 = currentRoom.p2;
+      const p1Paid = document.getElementById('p1PaidAmount').innerText;
+      const p2Paid = document.getElementById('p2PaidAmount').innerText;
+
+      const text = `*📊 HostelHisab Monthly Report (${month})*\n` +
+                   `Room: ${currentRoom.roomName}\n\n` +
+                   `• Total Kharcha: *${total}*\n` +
+                   `• ${p1} ne diye: ${p1Paid}\n` +
+                   `• ${p2} ne diye: ${p2Paid}\n\n` +
+                   `*Final Hisab:* ${settlement}`;
+
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    function downloadCSV() {
+      const filtered = getFilteredExpenses();
+      if (!filtered.length) return alert("Download karne ke liye koi data nahi hai.");
+      let csv = "Date,Item,Category,Amount,Paid By,Split Type\n";
+      filtered.forEach(r => {
+        csv += `"${r.date}","${r.title}","${r.category}",${r.amount},"${r.paidBy}","${r.splitType}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HostelHisab_${document.getElementById('monthFilter').value}.csv`;
+      a.click();
+    }
+
+    function logoutRoom() {
+      if (confirm("Kya aap is room se bahar nikalna chahte hain?")) {
+        localStorage.removeItem('hostelHisabRoom');
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>
